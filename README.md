@@ -1,4 +1,5 @@
 # Quantitative Finance Examples in ISO C++ Parallelism
+# UDARA'S VERSION
 
 This project contains two sample applications relevant to quantitative finance.
 These examples are intended to demonstrate how ISO C++ can be used to write code
