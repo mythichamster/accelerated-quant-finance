@@ -1,6 +1,6 @@
 CXX=nvc++ 
 ifneq (,$(findstring nvc++,$(CXX)))
-	CXXFLAGS=-fast -mp -std=c++20
+	CXXFLAGS=-fast -mp -std=c++20 -I$(HOME)/mdspan/include
 	LDFLAGS=
 	STDPARFLAGS_GPU=-mp -stdpar=gpu -gpu=ccall
 	STDPARFLAGS_CPU=-mp -stdpar=multicore
