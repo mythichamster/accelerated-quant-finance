@@ -37,6 +37,7 @@
 #include <memory>
 #include <span>
 #include <chrono>
+#include <numeric>
 #include <vector>
 #include <cmath>
 #include <experimental/mdspan>
@@ -62,8 +63,8 @@ const double money_start = -0.4;      // starting moneyness 40% below at the mon
 const double money_end = 0.6;         // ending moneyness 60% above at the money
 const int DEFAULT_N_MONEY_STEPS = 60; // number of moneyness steps
 
-// Run a few more timing iterations when using the GPU, since it's so much faster
-const int NUM_ITERATIONS = 100;
+const int NUM_ITERATIONS = 100;   // inner kernel repetitions per timed run
+const int DEFAULT_NUM_RUNS = 100; // outer runs to average over
 
 const double RISKFREE = 0.02;
 const double S0 = 100.0;
@@ -76,6 +77,7 @@ int main(int argc, char **argv)
   const int n_money_steps = (argc > 1) ? std::atoi(argv[1]) : DEFAULT_N_MONEY_STEPS;
   const int n_vol_steps = (argc > 2) ? std::atoi(argv[2]) : DEFAULT_N_VOL_STEPS;
   const int n_t_steps = (argc > 3) ? std::atoi(argv[3]) : DEFAULT_N_T_STEPS;
+  const int num_runs = (argc > 4) ? std::atoi(argv[4]) : DEFAULT_NUM_RUNS;
   const double t_step = 1.0 / n_t_steps;
   const int OPT_N = n_vol_steps * n_t_steps * n_money_steps;
   const double money_step = (money_end - money_start) / n_money_steps;
@@ -135,21 +137,24 @@ int main(int argc, char **argv)
                   S0, &Strikes[0],
                   &Maturities[0], RISKFREE, &Volatilities[0], OPT_N);
 
-  printf("...running reference calculations (%d iterations).\n\n", NUM_ITERATIONS);
-  auto rt1 = std::chrono::high_resolution_clock::now();
-  for (i = 0; i < NUM_ITERATIONS; i++)
-  { // Run multiple iterations for timing purposes
-    // Calculate options values on CPU
-    BlackScholesCPU(&CallPricesCPU[0], &PutPricesCPU[0],
-                    S0, &Strikes[0],
-                    &Maturities[0], RISKFREE, &Volatilities[0], OPT_N);
+  printf("...running reference calculations (%d runs x %d iterations).\n\n", num_runs, NUM_ITERATIONS);
+  std::vector<double> rtimes(num_runs);
+  for (int run = 0; run < num_runs; run++)
+  {
+    auto rt1 = std::chrono::high_resolution_clock::now();
+    for (i = 0; i < NUM_ITERATIONS; i++)
+    {
+      BlackScholesCPU(&CallPricesCPU[0], &PutPricesCPU[0],
+                      S0, &Strikes[0],
+                      &Maturities[0], RISKFREE, &Volatilities[0], OPT_N);
+    }
+    auto rt2 = std::chrono::high_resolution_clock::now();
+    rtimes[run] = std::chrono::duration<double, std::milli>(rt2 - rt1).count();
   }
-  auto rt2 = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> rtime_ms = (rt2 - rt1);
-  double rtime = rtime_ms.count();
+  double rtime = std::accumulate(rtimes.begin(), rtimes.end(), 0.0) / num_runs;
   int numOpts = 2 * OPT_N; // Calls and Puts
   printf("Options count          : %i     \n", numOpts);
-  printf("BlackScholesCPU() time : %f msec\n", rtime);
+  printf("BlackScholesCPU() time : %f msec (avg over %d runs)\n", rtime, num_runs);
   printf("Gigaoptions per second : %f     \n\n",
          ((double)(numOpts) * 1E-9) * NUM_ITERATIONS / (rtime * 1E-3));
 
@@ -168,21 +173,24 @@ int main(int argc, char **argv)
   checkCudaErrors(cudaDeviceSynchronize()); // Synchronize before calculation to ensure proper timing.
 #endif
 
-  auto t1 = std::chrono::high_resolution_clock::now();
-  printf("...running StdPar calculations (%d iterations).\n\n", NUM_ITERATIONS);
-  for (i = 0; i < NUM_ITERATIONS; i++)
-  { // Run multiple iterations for timing purposes
-    // Calculate options values on using Standard Parallelism
-    BlackScholesStdPar(CallPricesStdPar, PutPricesStdPar,
-                       S0, Strikes,
-                       Maturities, RISKFREE, Volatilities);
+  printf("...running StdPar calculations (%d runs x %d iterations).\n\n", num_runs, NUM_ITERATIONS);
+  std::vector<double> times(num_runs);
+  for (int run = 0; run < num_runs; run++)
+  {
+    auto t1 = std::chrono::high_resolution_clock::now();
+    for (i = 0; i < NUM_ITERATIONS; i++)
+    {
+      BlackScholesStdPar(CallPricesStdPar, PutPricesStdPar,
+                         S0, Strikes,
+                         Maturities, RISKFREE, Volatilities);
+    }
+    auto t2 = std::chrono::high_resolution_clock::now();
+    times[run] = std::chrono::duration<double, std::milli>(t2 - t1).count();
   }
-  auto t2 = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> time_ms = (t2 - t1);
-  double time = time_ms.count();
+  double time = std::accumulate(times.begin(), times.end(), 0.0) / num_runs;
 
   printf("Options count             : %i     \n", numOpts);
-  printf("BlackScholesStdPar() time : %f msec\n", time);
+  printf("BlackScholesStdPar() time : %f msec (avg over %d runs)\n", time, num_runs);
   printf("Gigaoptions per second    : %f     \n\n",
          ((double)(numOpts) * 1E-9) * NUM_ITERATIONS / (time * 1E-3));
 
