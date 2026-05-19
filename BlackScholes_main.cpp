@@ -130,6 +130,11 @@ int main(int argc, char **argv)
       }
     }
   }
+  // Warm up CPU caches before timing, equivalent to the GPU prefetch below
+  BlackScholesCPU(&CallPricesCPU[0], &PutPricesCPU[0],
+                  S0, &Strikes[0],
+                  &Maturities[0], RISKFREE, &Volatilities[0], OPT_N);
+
   printf("...running reference calculations (%d iterations).\n\n", NUM_ITERATIONS);
   auto rt1 = std::chrono::high_resolution_clock::now();
   for (i = 0; i < NUM_ITERATIONS; i++)
