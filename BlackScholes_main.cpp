@@ -49,18 +49,18 @@
 //
 // Equally spaced grid along maturity, moneyness, and volatility axes
 ////////////////////////////////////////////////////////////////////////////////
-const int n_vol_steps = 40;   // 40 volatility steps
-const double vol_start = 0.1; // starting volatility of 10%
-const double vol_step = 0.01; // step size of 1%
+const int DEFAULT_N_VOL_STEPS = 40; // 40 volatility steps
+const double vol_start = 0.1;       // starting volatility of 10%
+const double vol_step = 0.01;       // step size of 1%
 
-const int days_in_year = 365;                   // 365 days in year
-const int num_years = 10;                       // 10 years
-const int n_t_steps = days_in_year * num_years; // number of time steps
-const double t_start = 0.5;                     // starting maturity (1/2 year)
-const double t_step = 1. / (n_t_steps);         // daily
+const int days_in_year = 365;                           // 365 days in year
+const int num_years = 10;                               // 10 years
+const int DEFAULT_N_T_STEPS = days_in_year * num_years; // number of time steps
+const double t_start = 0.5;                             // starting maturity (1/2 year)
 
-const double money_start = -0.4; // starting moneyness 40% below at the money
-const double money_end = 0.6;    // ending moneyness 60% above at the money
+const double money_start = -0.4;      // starting moneyness 40% below at the money
+const double money_end = 0.6;         // ending moneyness 60% above at the money
+const int DEFAULT_N_MONEY_STEPS = 60; // number of moneyness steps
 
 // Run a few more timing iterations when using the GPU, since it's so much faster
 const int NUM_ITERATIONS = 100;
@@ -73,13 +73,17 @@ const double S0 = 100.0;
 ////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char **argv)
 {
-  const int n_money_steps = (argc > 1) ? std::atoi(argv[1]) : 60;
+  const int n_money_steps = (argc > 1) ? std::atoi(argv[1]) : DEFAULT_N_MONEY_STEPS;
+  const int n_vol_steps = (argc > 2) ? std::atoi(argv[2]) : DEFAULT_N_VOL_STEPS;
+  const int n_t_steps = (argc > 3) ? std::atoi(argv[3]) : DEFAULT_N_T_STEPS;
+  const double t_step = 1.0 / n_t_steps;
   const int OPT_N = n_vol_steps * n_t_steps * n_money_steps;
   const double money_step = (money_end - money_start) / n_money_steps;
 
   // Start logs
   printf("[%s] - Starting...\n", argv[0]);
-  printf("Moneyness steps: %d (OPT_N = %d)\n", n_money_steps, OPT_N);
+  printf("Grid: %d money x %d vol x %d time steps (OPT_N = %d)\n",
+         n_money_steps, n_vol_steps, n_t_steps, OPT_N);
 
   double diff, ref, sum_diff, sum_ref, max_diff, L1norm;
 
