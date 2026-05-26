@@ -4,9 +4,9 @@
 # Performance results
 Running on Lambda Labs 8xA100 (40GB SXM4) -- 128 vCPUs, 1800GB RAM
 
-```[./BlackScholes_gpu 6 4 365]``` ~10,000 options : 2X speedup
-```[./BlackScholes_gpu 6 4 3650]``` ~100,000 options : 12X speedup
-```[./BlackScholes_gpu 60 4 3650]``` ~1,000,000 options : 30X speedup
+```[./BlackScholes_gpu 6 4 365]``` ~10,000 options : 2X speedup \
+```[./BlackScholes_gpu 6 4 3650]``` ~100,000 options : 12X speedup \
+```[./BlackScholes_gpu 60 4 3650]``` ~1,000,000 options : 30X speedup \
 ```[./BlackScholes_gpu 60 40 3650]``` ~10,000,000 options:  40X speedup
 
 This project contains two sample applications relevant to quantitative finance.
